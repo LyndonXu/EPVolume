@@ -86,6 +86,10 @@ BEGIN_MESSAGE_MAP(CEPVolumeDlg, CDialogEx)
 	ON_CBN_SELCHANGE(IDC_COMBO_Dev, &CEPVolumeDlg::OnCbnSelchangeComboDev)
 	ON_BN_CLICKED(IDC_MFC_COLOR_BTN, &CEPVolumeDlg::OnBnClickedMfcColorBtn)
 	ON_NOTIFY_EX_RANGE(TTN_NEEDTEXT, 0, 0xFFFF, &CEPVolumeDlg::OnToolTipNotify)
+	ON_MESSAGE(MM_WIM_CLOSE, MsgWaveInClose)
+	ON_MESSAGE(MM_WIM_OPEN, MsgWaveInOpen)
+	ON_MESSAGE(MM_WIM_DATA, MsgWaveInData)
+	ON_BN_CLICKED(IDC_BTN_Record, &CEPVolumeDlg::OnBnClickedBtnRecord)
 END_MESSAGE_MAP()
 
 
@@ -196,6 +200,8 @@ BOOL CEPVolumeDlg::OnInitDialog()
 		//RECT stRect = { 0, -32, 32, 0 };
 		//m_csToolTips.AddTool(this, L"Tips", &stRect, IDD_DLG_Show);
 	}
+
+
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -554,4 +560,38 @@ BOOL CEPVolumeDlg::PreTranslateMessage(MSG* pMsg)
 	}
 
 	return CDialogEx::PreTranslateMessage(pMsg);
+}
+
+LRESULT CEPVolumeDlg::MsgWaveInOpen(WPARAM wParam, LPARAM lParam)
+{
+	return 0;
+}
+LRESULT CEPVolumeDlg::MsgWaveInClose(WPARAM wParam, LPARAM lParam)
+{
+	return 0;
+}
+LRESULT CEPVolumeDlg::MsgWaveInData(WPARAM wParam, LPARAM lParam)
+{
+	LPWAVEHDR pHdr = (LPWAVEHDR)wParam;
+	FILE *pFile = NULL;
+	{
+		fopen_s(&pFile, "f:\\record.pcm", "ab+");
+		if (pFile != NULL)
+		{
+			fwrite(pHdr->lpData, 1, pHdr->dwBytesRecorded, pFile);
+			fclose(pFile);
+		}
+	}
+	MMRESULT mmres = waveInUnprepareHeader(m_csAudioRecord.m_hWaveHandle, pHdr, sizeof(WAVEHDR));
+	mmres = waveInPrepareHeader(m_csAudioRecord.m_hWaveHandle, pHdr, sizeof(WAVEHDR));
+	mmres = waveInAddBuffer(m_csAudioRecord.m_hWaveHandle, pHdr, sizeof(WAVEHDR));
+	return 0;
+}
+
+
+
+void CEPVolumeDlg::OnBnClickedBtnRecord()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	m_csAudioRecord.Start(L"麦克风", GetSafeHwnd());
 }

@@ -185,6 +185,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AudioRecord.h" />
     <ClInclude Include="EPVolume.h" />
     <ClInclude Include="EPVolumeCtrl.h" />
     <ClInclude Include="EPVolumeDlg.h" />
@@ -195,6 +196,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AudioRecord.cpp" />
     <ClCompile Include="EPVolume.cpp" />
     <ClCompile Include="EPVolumeCtrl.cpp" />
     <ClCompile Include="EPVolumeDlg.cpp" />

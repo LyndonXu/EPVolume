@@ -11,6 +11,7 @@
 #include <map>
 #include "afxbutton.h"
 #include "afxcolorbutton.h"
+#include "AudioRecord.h"
 
 using namespace std;
 
@@ -73,4 +74,12 @@ public:
 	afx_msg BOOL OnToolTipNotify(UINT id, NMHDR *pNMHDR, LRESULT *pResult);
 
 	virtual BOOL PreTranslateMessage(MSG* pMsg);
+
+	LRESULT MsgWaveInOpen(WPARAM wParam, LPARAM lParam);
+	LRESULT MsgWaveInClose(WPARAM wParam, LPARAM lParam);
+	LRESULT MsgWaveInData(WPARAM wParam, LPARAM lParam);
+
+	CAudioRecord m_csAudioRecord;
+
+	afx_msg void OnBnClickedBtnRecord();
 };
