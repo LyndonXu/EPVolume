@@ -12,6 +12,7 @@
 #include "afxbutton.h"
 #include "afxcolorbutton.h"
 #include "AudioRecord.h"
+#include "afxcmn.h"
 
 using namespace std;
 
@@ -82,4 +83,5 @@ public:
 	CAudioRecord m_csAudioRecord;
 
 	afx_msg void OnBnClickedBtnRecord();
+	CProgressCtrl m_csPGCAudioRecord;
 };

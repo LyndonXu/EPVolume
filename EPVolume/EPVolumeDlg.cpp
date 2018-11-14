@@ -68,6 +68,7 @@ void CEPVolumeDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_COMBO_Dev, m_csComboDev);
 	DDX_Control(pDX, IDC_MFC_COLOR_BTN, m_csMFCColorBtn);
+	DDX_Control(pDX, IDC_PGC_AudioRecord, m_csPGCAudioRecord);
 }
 
 BEGIN_MESSAGE_MAP(CEPVolumeDlg, CDialogEx)
@@ -173,10 +174,10 @@ BOOL CEPVolumeDlg::OnInitDialog()
 	m_pVolumeCtrl->GetMute(_DEV_Audio_Type_OUT, &bMute);
 	((CButton *)GetDlgItem(IDC_SLIDER_Speaker))->SetCheck(bMute ? BST_CHECKED : BST_UNCHECKED);
 
-#if 0
+#if 1
 	NotifyInit();
-	ShowWindow(SW_MINIMIZE);
-	PostMessage(WM_SYSCOMMAND, SC_MINIMIZE, 0);
+	//ShowWindow(SW_MINIMIZE);
+	//PostMessage(WM_SYSCOMMAND, SC_MINIMIZE, 0);
 #endif
 
 	m_s32ChosenColor = RGB(255, 0, 0);
@@ -187,8 +188,9 @@ BOOL CEPVolumeDlg::OnInitDialog()
 	//m_csMFCColorBtn.SetColor((COLORREF)-1);
 	//m_csMFCColorBtn.SetColumnsNumber(5);
 
+	//EnableToolTips();
+#if 0
 	{
-		//EnableToolTips();
 
 		m_csToolTips.Create(this);
 		m_csToolTips.Activate(TRUE);
@@ -200,8 +202,8 @@ BOOL CEPVolumeDlg::OnInitDialog()
 		//RECT stRect = { 0, -32, 32, 0 };
 		//m_csToolTips.AddTool(this, L"Tips", &stRect, IDD_DLG_Show);
 	}
-
-
+#endif
+	m_csPGCAudioRecord.SetRange(0, 100);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -276,12 +278,18 @@ void CEPVolumeDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 		if (nId == IDC_SLIDER_Speaker)
 		{
 			m_pVolumeCtrl->SetVolume(_DEV_Audio_Type_OUT, nVolume);
-			m_csToolTips.Update();
+			if (m_csToolTips.GetSafeHwnd() != NULL)
+			{
+				m_csToolTips.Update();
+			}
 		}
 		else if (nId == IDC_SLIDER_Phone)
 		{
 			m_pVolumeCtrl->SetVolume(_DEV_Audio_Type_IN, nVolume);
-			m_csToolTips.Update();
+			if (m_csToolTips.GetSafeHwnd() != NULL)
+			{
+				m_csToolTips.Update();
+			}
 		}
 	}
 	CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
@@ -573,6 +581,36 @@ LRESULT CEPVolumeDlg::MsgWaveInClose(WPARAM wParam, LPARAM lParam)
 LRESULT CEPVolumeDlg::MsgWaveInData(WPARAM wParam, LPARAM lParam)
 {
 	LPWAVEHDR pHdr = (LPWAVEHDR)wParam;
+
+	INT16 s16MaxLeft = INT16_MIN;
+	INT16 s16MinLeft = INT16_MAX;
+	INT16 s16MaxRight = INT16_MIN;
+	INT16 s16MinRight = INT16_MAX;
+
+	INT16 *pDataLeft = (INT16 *)pHdr->lpData;
+	INT16 *pDataRight = pDataLeft + 1;
+
+	for (UINT32 i = 0; i < pHdr->dwBytesRecorded; i += 2, pDataLeft += 2, pDataRight += 2)
+	{
+		if (pDataLeft[0] < s16MinLeft)
+		{
+			s16MinLeft = pDataLeft[0];
+		}
+		if (pDataLeft[0] > s16MaxLeft)
+		{
+			s16MaxLeft = pDataLeft[0];
+		}
+
+		if (pDataRight[0] < s16MinRight)
+		{
+			s16MinRight = pDataRight[0];
+		}
+		if (pDataRight[0] > s16MaxRight)
+		{
+			s16MaxRight = pDataRight[0];
+		}
+	}
+
 	FILE *pFile = NULL;
 	{
 		fopen_s(&pFile, "f:\\record.pcm", "ab+");
@@ -581,10 +619,62 @@ LRESULT CEPVolumeDlg::MsgWaveInData(WPARAM wParam, LPARAM lParam)
 			fwrite(pHdr->lpData, 1, pHdr->dwBytesRecorded, pFile);
 			fclose(pFile);
 		}
+
+
 	}
 	MMRESULT mmres = waveInUnprepareHeader(m_csAudioRecord.m_hWaveHandle, pHdr, sizeof(WAVEHDR));
 	mmres = waveInPrepareHeader(m_csAudioRecord.m_hWaveHandle, pHdr, sizeof(WAVEHDR));
 	mmres = waveInAddBuffer(m_csAudioRecord.m_hWaveHandle, pHdr, sizeof(WAVEHDR));
+
+	
+		//s16MinLeft
+		//s16MaxRight
+		//s16MinRight
+
+	if (s16MaxLeft < 0)
+	{
+		s16MaxLeft = 0 - s16MaxLeft;
+	}
+	if (s16MinLeft < 0)
+	{
+		s16MinLeft = 0 - s16MinLeft;
+	}
+
+	if (s16MaxRight < 0)
+	{
+		s16MaxRight = 0 - s16MaxRight;
+	}
+	if (s16MinRight < 0)
+	{
+		s16MinRight = 0 - s16MinRight;
+	}
+
+	if (s16MaxLeft < s16MinLeft)
+	{
+		s16MaxLeft = s16MinLeft;
+	}
+
+	if (s16MaxRight < s16MinRight)
+	{
+		s16MaxRight = s16MinRight;
+	}
+
+	double d64DBLeft = s16MaxLeft;
+	d64DBLeft = 20.0 * log10(d64DBLeft / 32237.0);
+	if (d64DBLeft < -100.0)
+	{
+		d64DBLeft = -100.0;
+	}
+	else if (d64DBLeft > 20.0)
+	{
+		d64DBLeft = 20.0;
+	}
+
+	s16MaxLeft = d64DBLeft;
+	m_csPGCAudioRecord.SetPos(s16MaxLeft + 100);
+
+	//m_csPGCAudioRecord.SetPos((INT32)s16MaxLeft * 100 / 32237);
+
 	return 0;
 }
 
@@ -595,3 +685,4 @@ void CEPVolumeDlg::OnBnClickedBtnRecord()
 	// TODO: 在此添加控件通知处理程序代码
 	m_csAudioRecord.Start(L"麦克风", GetSafeHwnd());
 }
+
